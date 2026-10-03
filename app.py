@@ -3,16 +3,33 @@ import json, os, queue, shutil, subprocess, threading, tkinter as tk
 from tkinter import ttk, messagebox
 from backend import Backend, host_env
 
-BG='#171512'; PANEL='#242019'; TEXT='#f7eddd'; MUTED='#b8ac99'; GOLD='#efb366'
+BG='#171512'; PANEL='#242019'; TEXT='#fff5e8'; MUTED='#d2c7b8'; GOLD='#efb366'; HOVER='#40362b'; DISABLED='#c5b9a8'
 class App:
  def __init__(self, root):
   self.root=root; self.backend=Backend(); self.events=queue.Queue(); self.busy=False; self.rows=[]
   root.title('CaramelPopKern • Sugar coating the kernel'); root.geometry('1100x760'); root.minsize(850,600); root.configure(bg=BG)
   style=ttk.Style(); style.theme_use('clam')
   style.configure('.',background=PANEL,foreground=TEXT,font=('Sans',11))
-  style.configure('TNotebook',background=BG); style.configure('TNotebook.Tab',padding=(18,12))
-  style.map('TNotebook.Tab',background=[('selected',GOLD)],foreground=[('selected',BG)])
-  style.configure('TButton',padding=(12,8)); style.configure('Treeview',fieldbackground=PANEL,rowheight=30)
+  # Clam supplies its own light hover/disabled colours unless every state is mapped.
+  style.configure('TFrame',background=PANEL)
+  style.configure('TLabel',background=PANEL,foreground=TEXT)
+  style.map('TLabel',foreground=[('disabled',DISABLED)])
+  style.configure('TNotebook',background=BG)
+  style.configure('TNotebook.Tab',background=PANEL,foreground=TEXT,padding=(18,12))
+  style.map('TNotebook.Tab',background=[('selected',GOLD),('active',HOVER)],
+            foreground=[('selected',BG),('disabled',DISABLED),('active',TEXT)])
+  style.configure('TButton',background=HOVER,foreground=TEXT,padding=(12,8))
+  style.map('TButton',background=[('disabled',PANEL),('pressed',GOLD),('active',HOVER)],
+            foreground=[('disabled',DISABLED),('pressed',BG),('active',TEXT)])
+  style.configure('TCheckbutton',background=PANEL,foreground=TEXT)
+  style.map('TCheckbutton',background=[('active',PANEL)],
+            foreground=[('disabled',DISABLED),('active',TEXT)],
+            indicatorbackground=[('disabled',HOVER),('selected',GOLD),('!selected',MUTED)],
+            indicatorforeground=[('selected',BG),('!selected',BG)])
+  style.configure('Treeview',background=PANEL,foreground=TEXT,fieldbackground=PANEL,rowheight=30)
+  style.map('Treeview',background=[('selected',GOLD)],foreground=[('selected',BG)])
+  style.configure('Treeview.Heading',background=HOVER,foreground=TEXT)
+  style.map('Treeview.Heading',background=[('active',HOVER)],foreground=[('active',TEXT)])
   tk.Label(root,text='CaramelPopKern',font=('Sans',26,'bold'),fg=GOLD,bg=BG).pack(anchor='w',padx=26,pady=(22,0))
   tk.Label(root,text='Sugar coating the kernel  •  Select your ingredients. Keep a way back.',fg=MUTED,bg=BG).pack(anchor='w',padx=28,pady=(4,18))
   self.tabs=ttk.Notebook(root); self.tabs.pack(fill='both',expand=True,padx=24)
@@ -33,7 +50,7 @@ class App:
   ttk.Button(self.pages['Recovery'],text='Refresh history',command=self.show_history).pack(anchor='e',pady=10)
   root.after(100,self.poll); self.refresh()
  def textbox(self,parent):
-  box=tk.Text(parent,bg=PANEL,fg=TEXT,insertbackground=GOLD,relief='flat',wrap='word',font=('Sans',11),padx=16,pady=16); box.pack(fill='both',expand=True); box.configure(state='disabled'); return box
+  box=tk.Text(parent,bg=PANEL,fg=TEXT,insertbackground=GOLD,selectbackground=GOLD,selectforeground=BG,relief='flat',wrap='word',font=('Sans',11),padx=16,pady=16); box.pack(fill='both',expand=True); box.configure(state='disabled'); return box
  def write(self,box,text): box.configure(state='normal'); box.delete('1.0','end'); box.insert('end',text); box.configure(state='disabled')
  def work(self,fn,callback):
   if self.busy: return
