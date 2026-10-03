@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 import json, os, queue, shutil, subprocess, threading, tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from backend import Backend, host_env
+from updater import VERSION, replace_appimage
 
 BG='#171512'; PANEL='#242019'; TEXT='#fff5e8'; MUTED='#d2c7b8'; GOLD='#efb366'; HOVER='#40362b'; DISABLED='#c5b9a8'
 class App:
  def __init__(self, root):
   self.root=root; self.backend=Backend(); self.events=queue.Queue(); self.busy=False; self.rows=[]
-  root.title('CaramelPopKern • Sugar coating the kernel'); root.geometry('1100x760'); root.minsize(850,600); root.configure(bg=BG)
+  root.title('CaramelPopKern '+VERSION+' • Sugar coating the kernel'); root.geometry('1100x760'); root.minsize(850,600); root.configure(bg=BG)
+  menu=tk.Menu(root); help_menu=tk.Menu(menu,tearoff=False); help_menu.add_command(label='About & Upgrade…',command=self.about); menu.add_cascade(label='Help',menu=help_menu); root.configure(menu=menu)
   style=ttk.Style(); style.theme_use('clam')
   style.configure('.',background=PANEL,foreground=TEXT,font=('Sans',11))
   # Clam supplies its own light hover/disabled colours unless every state is mapped.
@@ -49,6 +51,28 @@ class App:
   self.recovery=self.textbox(self.pages['Recovery'])
   ttk.Button(self.pages['Recovery'],text='Refresh history',command=self.show_history).pack(anchor='e',pady=10)
   root.after(100,self.poll); self.refresh()
+ def about(self):
+  win=tk.Toplevel(self.root); win.title('About CaramelPopKern'); win.geometry('620x440'); win.configure(bg=PANEL)
+  ttk.Label(win,text='CaramelPopKern',font=('Sans',22,'bold'),foreground=GOLD).pack(pady=(24,6))
+  ttk.Label(win,text='Version '+VERSION+' • Sugar coating the kernel').pack(pady=6)
+  ttk.Label(win,text='A selective Linux kernel and gaming manager.\n\nEarly development release: kernel/driver switching and automatic\nrollback are unfinished. OptiScaler activation is unavailable.\n\nUpdates use AppImage files. No online release source is configured.',wraplength=560,justify='center').pack(padx=20,pady=16)
+  ttk.Button(win,text='Check for updates',command=lambda:messagebox.showinfo('Online updates unavailable','No release repository has been configured yet. Download a CaramelPopKern AppImage from the project publisher, then use Install downloaded update.',parent=win)).pack(pady=5)
+  button=ttk.Button(win,text='Install downloaded update…',command=lambda:self.upgrade(win)); button.pack(pady=5)
+  if not os.environ.get('APPIMAGE'):
+   button.configure(state='disabled')
+   ttk.Label(win,text='Run the AppImage release to enable in-app replacement.').pack(pady=5)
+  ttk.Button(win,text='Close',command=win.destroy).pack(pady=10)
+ def upgrade(self,parent):
+  if self.busy:
+   messagebox.showinfo('Operation in progress','Wait for the current operation before updating.',parent=parent); return
+  candidate=filedialog.askopenfilename(parent=parent,title='Choose downloaded CaramelPopKern AppImage',filetypes=[('AppImage releases','*.AppImage')])
+  if not candidate: return
+  if not messagebox.askyesno('Review update','Only install a CaramelPopKern release from a publisher you trust. This app cannot verify its publisher, signature or version.\n\nSelected file:\n'+candidate+'\n\nReplace the current AppImage and preserve a backup? The selected file will not be executed now.',parent=parent): return
+  try:
+   backup=replace_appimage(os.environ['APPIMAGE'],candidate)
+  except (OSError,ValueError) as e:
+   messagebox.showerror('Update failed',str(e),parent=parent); return
+  messagebox.showinfo('Update installed','Close the app and reopen the AppImage to use the update.\n\nPrevious version saved at:\n'+str(backup)+'\n\nYour settings and history were retained.',parent=parent)
  def textbox(self,parent):
   box=tk.Text(parent,bg=PANEL,fg=TEXT,insertbackground=GOLD,selectbackground=GOLD,selectforeground=BG,relief='flat',wrap='word',font=('Sans',11),padx=16,pady=16); box.pack(fill='both',expand=True); box.configure(state='disabled'); return box
  def write(self,box,text): box.configure(state='normal'); box.delete('1.0','end'); box.insert('end',text); box.configure(state='disabled')

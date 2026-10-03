@@ -11,7 +11,7 @@ stdlib=Path(sys.base_prefix)/'lib'/('python'+str(sys.version_info.major)+'.'+str
 shutil.copytree(stdlib,lib/stdlib.name,ignore=shutil.ignore_patterns('site-packages','__pycache__','test','tests','idlelib','ensurepip','turtledemo'))
 for name in ['tcl8.6','tk8.6']: shutil.copytree(Path('/usr/lib')/name,lib/name)
 app=stage/'usr/share/caramelpopkern'; app.mkdir(parents=True)
-for name in ['app.py','backend.py','caramelpopkern.svg','README.md']: shutil.copy2(source/name,app/name)
+for name in ['app.py','backend.py','updater.py','caramelpopkern.svg','README.md']: shutil.copy2(source/name,app/name)
 # ldd reports transitive dependencies. Include the loader and runtime without
 # LD_LIBRARY_PATH, so distro package-manager children use their host libraries.
 elves=[stage/'usr/bin/python3']+list((lib/stdlib.name/'lib-dynload').glob('*.so'))
