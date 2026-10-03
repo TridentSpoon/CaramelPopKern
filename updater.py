@@ -1,7 +1,7 @@
 """User-selected AppImage replacement. Never downloads or executes update files."""
 import os, shutil, tempfile
 from pathlib import Path
-VERSION='0.1.1'
+VERSION='0.1.2'
 def validate_appimage(path):
  path=Path(path)
  if not path.is_file(): raise ValueError('Select an existing AppImage file.')

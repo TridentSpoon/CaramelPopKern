@@ -32,7 +32,7 @@ Source development requires Python 3 and Tkinter. Ubuntu: `python3-tk`; Fedora: 
 
 ## About and upgrades
 
-Version 0.1.1 adds **Help → About & Upgrade**. When running an AppImage, select a downloaded CaramelPopKern AppImage to replace the current file atomically, keeping a separate backup. Close and reopen to use the update. No downloaded update is executed automatically. The app checks file format and x86_64 architecture, but does not verify publisher, version or signatures: choose only trusted project releases. Online release checks remain unavailable until a publishing repository is configured.
+Version 0.1.2 places **About & Upgrade** in the top-right hamburger menu and uses flat navigation tabs that change colour on selection. When running an AppImage, select a downloaded CaramelPopKern AppImage to replace the current file atomically, keeping a separate backup. Close and reopen to use the update. No downloaded update is executed automatically. The app checks file format and x86_64 architecture, but does not verify publisher, version or signatures: choose only trusted project releases. Online release checks remain unavailable until a publishing repository is configured.
 
 ## Working now
 - Live OS, kernel, GPU, NVIDIA driver and Secure Boot discovery.

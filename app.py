@@ -9,7 +9,6 @@ class App:
  def __init__(self, root):
   self.root=root; self.backend=Backend(); self.events=queue.Queue(); self.busy=False; self.rows=[]
   root.title('CaramelPopKern '+VERSION+' • Sugar coating the kernel'); root.geometry('1100x760'); root.minsize(850,600); root.configure(bg=BG)
-  menu=tk.Menu(root); help_menu=tk.Menu(menu,tearoff=False); help_menu.add_command(label='About & Upgrade…',command=self.about); menu.add_cascade(label='Help',menu=help_menu); root.configure(menu=menu)
   style=ttk.Style(); style.theme_use('clam')
   style.configure('.',background=PANEL,foreground=TEXT,font=('Sans',11))
   # Clam supplies its own light hover/disabled colours unless every state is mapped.
@@ -32,12 +31,37 @@ class App:
   style.map('Treeview',background=[('selected',GOLD)],foreground=[('selected',BG)])
   style.configure('Treeview.Heading',background=HOVER,foreground=TEXT)
   style.map('Treeview.Heading',background=[('active',HOVER)],foreground=[('active',TEXT)])
-  tk.Label(root,text='CaramelPopKern',font=('Sans',26,'bold'),fg=GOLD,bg=BG).pack(anchor='w',padx=26,pady=(22,0))
+  header=tk.Frame(root,bg=BG); header.pack(fill='x',padx=26,pady=(22,0))
+  tk.Label(header,text='CaramelPopKern',font=('Sans',26,'bold'),fg=GOLD,bg=BG).pack(side='left')
+  self.menu=tk.Menu(root,tearoff=False,bg=PANEL,fg=TEXT,activebackground=GOLD,activeforeground=BG)
+  self.menu.add_command(label='About & Upgrade…',command=self.about)
+  self.menu.add_separator(); self.menu.add_command(label='Quit',command=root.destroy)
+  hamburger=tk.Button(header,text='☰',font=('Sans',22),bg=BG,fg=TEXT,
+                      activebackground=HOVER,activeforeground=TEXT,relief='flat',bd=0,
+                      padx=12,pady=2,takefocus=True)
+  hamburger.configure(command=lambda:self.menu.tk_popup(hamburger.winfo_rootx(),hamburger.winfo_rooty()+hamburger.winfo_height()))
+  hamburger.pack(side='right')
   tk.Label(root,text='Sugar coating the kernel  •  Select your ingredients. Keep a way back.',fg=MUTED,bg=BG).pack(anchor='w',padx=28,pady=(4,18))
-  self.tabs=ttk.Notebook(root); self.tabs.pack(fill='both',expand=True,padx=24)
-  self.pages={}
+  # Flat navigation keeps the same geometry in every selection state.
+  style.layout('Flat.TNotebook.Tab',[])
+  navigation=tk.Frame(root,bg=BG); navigation.pack(fill='x',padx=24,pady=(0,0))
+  self.tabs=ttk.Notebook(root,style='Flat.TNotebook'); self.tabs.pack(fill='both',expand=True,padx=24)
+  self.pages={}; self.tab_buttons={}
   for name in ['Overview','Kernels','Gaming','Graphics & NVIDIA','Recovery']:
    frame=ttk.Frame(self.tabs,padding=20); self.tabs.add(frame,text=name); self.pages[name]=frame
+   button=tk.Button(navigation,text=name,font=('Sans',11),bg=PANEL,fg=TEXT,
+                    activebackground=PANEL,activeforeground=TEXT,relief='flat',bd=0,
+                    padx=18,pady=12,highlightthickness=0,takefocus=True,
+                    command=lambda page=frame:self.tabs.select(page))
+   button.pack(side='left'); self.tab_buttons[name]=button
+  def colour_tabs(event=None):
+   selected=self.tabs.select()
+   for name,button in self.tab_buttons.items():
+    active=str(self.pages[name])==selected
+    button.configure(bg=GOLD if active else PANEL,fg=BG if active else TEXT,
+                     activebackground=GOLD if active else PANEL,activeforeground=BG if active else TEXT)
+  self.tabs.bind('<<NotebookTabChanged>>',colour_tabs); colour_tabs()
+  root.bind('<Control-Tab>',lambda event:self.tabs.select((self.tabs.index('current')+1)%len(self.pages)))
   self.status=tk.StringVar(value='Inspecting this machine…'); tk.Label(root,textvariable=self.status,fg=MUTED,bg=BG,anchor='w').pack(fill='x',padx=26,pady=12)
   self.overview= self.textbox(self.pages['Overview'])
   ttk.Button(self.pages['Overview'],text='Refresh system',command=self.refresh).pack(anchor='e',pady=10)
