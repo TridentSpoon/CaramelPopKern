@@ -11,7 +11,7 @@ info() { if [[ $mode == zenity ]]; then zenity --info --title='CaramelPopKern In
 error() { if [[ $mode == zenity ]]; then zenity --error --title='CaramelPopKern Installer' --width=520 --text="$1"; else kdialog --title 'CaramelPopKern Installer' --error "$1"; fi; }
 ask() { if [[ $mode == zenity ]]; then zenity --question --title='CaramelPopKern Installer' --width=540 --text="$1"; else kdialog --title 'CaramelPopKern Installer' --yesno "$1"; fi; }
 if [[ ${EUID} == 0 ]]; then error 'Run this installer as your regular user. Administrator authentication is requested only for missing dependencies.'; exit 1; fi
-for file in app.py backend.py launch.sh; do
+for file in app.py backend.py updater.py launch.sh; do
     if [[ ! -f "$source_dir/$file" ]]; then error "Missing application file: $file. Extract the complete archive first."; exit 1; fi
 done
 install_root="${XDG_DATA_HOME:-$HOME/.local/share}"
@@ -38,7 +38,7 @@ if [[ -e "$app_dir" && ! -f "$app_dir/.caramelpopkern-install" ]]; then error 'T
 mkdir -p -- "$install_root" "$menu_dir"
 staging="$(mktemp -d "$install_root/.caramelpopkern-stage.XXXXXX")"
 trap 'if [[ -n ${staging:-} && -d $staging ]]; then rm -rf -- "$staging"; fi' EXIT
-cp -- "$source_dir/app.py" "$source_dir/backend.py" "$source_dir/launch.sh" "$source_dir/README.md" "$staging/"
+cp -- "$source_dir/app.py" "$source_dir/backend.py" "$source_dir/updater.py" "$source_dir/launch.sh" "$source_dir/README.md" "$staging/"
 cp -- "$source_dir/caramelpopkern.svg" "$staging/"
 chmod +x "$staging/launch.sh"
 printf '%s\n' 'CaramelPopKern user installation v0.1' > "$staging/.caramelpopkern-install"

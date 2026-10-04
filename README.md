@@ -30,6 +30,10 @@ Set `APPIMAGE_RUNTIME_FILE` to a trusted type-2 runtime if automatic download is
 
 Source development requires Python 3 and Tkinter. Ubuntu: `python3-tk`; Fedora: `python3-tkinter`; Arch/CachyOS/Omarchy: `tk` with Python.
 
+## About and upgrades
+
+Version 0.1.2 places **About & Upgrade** in the top-right hamburger menu and uses flat navigation tabs that change colour on selection. When running an AppImage, select a downloaded CaramelPopKern AppImage to replace the current file atomically, keeping a separate backup. Close and reopen to use the update. No downloaded update is executed automatically. The app checks file format and x86_64 architecture, but does not verify publisher, version or signatures: choose only trusted project releases. Online release checks remain unavailable until a publishing repository is configured.
+
 ## Working now
 - Live OS, kernel, GPU, NVIDIA driver and Secure Boot discovery.
 - Installed kernel module trees and repository kernel browsing (Arch family; limited Fedora discovery).

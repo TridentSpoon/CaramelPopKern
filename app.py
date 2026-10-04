@@ -1,24 +1,67 @@
 #!/usr/bin/env python3
 import json, os, queue, shutil, subprocess, threading, tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from backend import Backend, host_env
+from updater import VERSION, replace_appimage
 
-BG='#171512'; PANEL='#242019'; TEXT='#f7eddd'; MUTED='#b8ac99'; GOLD='#efb366'
+BG='#171512'; PANEL='#242019'; TEXT='#fff5e8'; MUTED='#d2c7b8'; GOLD='#efb366'; HOVER='#40362b'; DISABLED='#c5b9a8'
 class App:
  def __init__(self, root):
   self.root=root; self.backend=Backend(); self.events=queue.Queue(); self.busy=False; self.rows=[]
-  root.title('CaramelPopKern • Sugar coating the kernel'); root.geometry('1100x760'); root.minsize(850,600); root.configure(bg=BG)
+  root.title('CaramelPopKern '+VERSION+' • Sugar coating the kernel'); root.geometry('1100x760'); root.minsize(850,600); root.configure(bg=BG)
   style=ttk.Style(); style.theme_use('clam')
   style.configure('.',background=PANEL,foreground=TEXT,font=('Sans',11))
-  style.configure('TNotebook',background=BG); style.configure('TNotebook.Tab',padding=(18,12))
-  style.map('TNotebook.Tab',background=[('selected',GOLD)],foreground=[('selected',BG)])
-  style.configure('TButton',padding=(12,8)); style.configure('Treeview',fieldbackground=PANEL,rowheight=30)
-  tk.Label(root,text='CaramelPopKern',font=('Sans',26,'bold'),fg=GOLD,bg=BG).pack(anchor='w',padx=26,pady=(22,0))
+  # Clam supplies its own light hover/disabled colours unless every state is mapped.
+  style.configure('TFrame',background=PANEL)
+  style.configure('TLabel',background=PANEL,foreground=TEXT)
+  style.map('TLabel',foreground=[('disabled',DISABLED)])
+  style.configure('TNotebook',background=BG)
+  style.configure('TNotebook.Tab',background=PANEL,foreground=TEXT,padding=(18,12))
+  style.map('TNotebook.Tab',background=[('selected',GOLD),('active',HOVER)],
+            foreground=[('selected',BG),('disabled',DISABLED),('active',TEXT)])
+  style.configure('TButton',background=HOVER,foreground=TEXT,padding=(12,8))
+  style.map('TButton',background=[('disabled',PANEL),('pressed',GOLD),('active',HOVER)],
+            foreground=[('disabled',DISABLED),('pressed',BG),('active',TEXT)])
+  style.configure('TCheckbutton',background=PANEL,foreground=TEXT)
+  style.map('TCheckbutton',background=[('active',PANEL)],
+            foreground=[('disabled',DISABLED),('active',TEXT)],
+            indicatorbackground=[('disabled',HOVER),('selected',GOLD),('!selected',MUTED)],
+            indicatorforeground=[('selected',BG),('!selected',BG)])
+  style.configure('Treeview',background=PANEL,foreground=TEXT,fieldbackground=PANEL,rowheight=30)
+  style.map('Treeview',background=[('selected',GOLD)],foreground=[('selected',BG)])
+  style.configure('Treeview.Heading',background=HOVER,foreground=TEXT)
+  style.map('Treeview.Heading',background=[('active',HOVER)],foreground=[('active',TEXT)])
+  header=tk.Frame(root,bg=BG); header.pack(fill='x',padx=26,pady=(22,0))
+  tk.Label(header,text='CaramelPopKern',font=('Sans',26,'bold'),fg=GOLD,bg=BG).pack(side='left')
+  self.menu=tk.Menu(root,tearoff=False,bg=PANEL,fg=TEXT,activebackground=GOLD,activeforeground=BG)
+  self.menu.add_command(label='About & Upgrade…',command=self.about)
+  self.menu.add_separator(); self.menu.add_command(label='Quit',command=root.destroy)
+  hamburger=tk.Button(header,text='☰',font=('Sans',22),bg=BG,fg=TEXT,
+                      activebackground=HOVER,activeforeground=TEXT,relief='flat',bd=0,
+                      padx=12,pady=2,takefocus=True)
+  hamburger.configure(command=lambda:self.menu.tk_popup(hamburger.winfo_rootx(),hamburger.winfo_rooty()+hamburger.winfo_height()))
+  hamburger.pack(side='right')
   tk.Label(root,text='Sugar coating the kernel  •  Select your ingredients. Keep a way back.',fg=MUTED,bg=BG).pack(anchor='w',padx=28,pady=(4,18))
-  self.tabs=ttk.Notebook(root); self.tabs.pack(fill='both',expand=True,padx=24)
-  self.pages={}
+  # Flat navigation keeps the same geometry in every selection state.
+  style.layout('Flat.TNotebook.Tab',[])
+  navigation=tk.Frame(root,bg=BG); navigation.pack(fill='x',padx=24,pady=(0,0))
+  self.tabs=ttk.Notebook(root,style='Flat.TNotebook'); self.tabs.pack(fill='both',expand=True,padx=24)
+  self.pages={}; self.tab_buttons={}
   for name in ['Overview','Kernels','Gaming','Graphics & NVIDIA','Recovery']:
    frame=ttk.Frame(self.tabs,padding=20); self.tabs.add(frame,text=name); self.pages[name]=frame
+   button=tk.Button(navigation,text=name,font=('Sans',11),bg=PANEL,fg=TEXT,
+                    activebackground=PANEL,activeforeground=TEXT,relief='flat',bd=0,
+                    padx=18,pady=12,highlightthickness=0,takefocus=True,
+                    command=lambda page=frame:self.tabs.select(page))
+   button.pack(side='left'); self.tab_buttons[name]=button
+  def colour_tabs(event=None):
+   selected=self.tabs.select()
+   for name,button in self.tab_buttons.items():
+    active=str(self.pages[name])==selected
+    button.configure(bg=GOLD if active else PANEL,fg=BG if active else TEXT,
+                     activebackground=GOLD if active else PANEL,activeforeground=BG if active else TEXT)
+  self.tabs.bind('<<NotebookTabChanged>>',colour_tabs); colour_tabs()
+  root.bind('<Control-Tab>',lambda event:self.tabs.select((self.tabs.index('current')+1)%len(self.pages)))
   self.status=tk.StringVar(value='Inspecting this machine…'); tk.Label(root,textvariable=self.status,fg=MUTED,bg=BG,anchor='w').pack(fill='x',padx=26,pady=12)
   self.overview= self.textbox(self.pages['Overview'])
   ttk.Button(self.pages['Overview'],text='Refresh system',command=self.refresh).pack(anchor='e',pady=10)
@@ -32,8 +75,30 @@ class App:
   self.recovery=self.textbox(self.pages['Recovery'])
   ttk.Button(self.pages['Recovery'],text='Refresh history',command=self.show_history).pack(anchor='e',pady=10)
   root.after(100,self.poll); self.refresh()
+ def about(self):
+  win=tk.Toplevel(self.root); win.title('About CaramelPopKern'); win.geometry('620x440'); win.configure(bg=PANEL)
+  ttk.Label(win,text='CaramelPopKern',font=('Sans',22,'bold'),foreground=GOLD).pack(pady=(24,6))
+  ttk.Label(win,text='Version '+VERSION+' • Sugar coating the kernel').pack(pady=6)
+  ttk.Label(win,text='A selective Linux kernel and gaming manager.\n\nEarly development release: kernel/driver switching and automatic\nrollback are unfinished. OptiScaler activation is unavailable.\n\nUpdates use AppImage files. No online release source is configured.',wraplength=560,justify='center').pack(padx=20,pady=16)
+  ttk.Button(win,text='Check for updates',command=lambda:messagebox.showinfo('Online updates unavailable','No release repository has been configured yet. Download a CaramelPopKern AppImage from the project publisher, then use Install downloaded update.',parent=win)).pack(pady=5)
+  button=ttk.Button(win,text='Install downloaded update…',command=lambda:self.upgrade(win)); button.pack(pady=5)
+  if not os.environ.get('APPIMAGE'):
+   button.configure(state='disabled')
+   ttk.Label(win,text='Run the AppImage release to enable in-app replacement.').pack(pady=5)
+  ttk.Button(win,text='Close',command=win.destroy).pack(pady=10)
+ def upgrade(self,parent):
+  if self.busy:
+   messagebox.showinfo('Operation in progress','Wait for the current operation before updating.',parent=parent); return
+  candidate=filedialog.askopenfilename(parent=parent,title='Choose downloaded CaramelPopKern AppImage',filetypes=[('AppImage releases','*.AppImage')])
+  if not candidate: return
+  if not messagebox.askyesno('Review update','Only install a CaramelPopKern release from a publisher you trust. This app cannot verify its publisher, signature or version.\n\nSelected file:\n'+candidate+'\n\nReplace the current AppImage and preserve a backup? The selected file will not be executed now.',parent=parent): return
+  try:
+   backup=replace_appimage(os.environ['APPIMAGE'],candidate)
+  except (OSError,ValueError) as e:
+   messagebox.showerror('Update failed',str(e),parent=parent); return
+  messagebox.showinfo('Update installed','Close the app and reopen the AppImage to use the update.\n\nPrevious version saved at:\n'+str(backup)+'\n\nYour settings and history were retained.',parent=parent)
  def textbox(self,parent):
-  box=tk.Text(parent,bg=PANEL,fg=TEXT,insertbackground=GOLD,relief='flat',wrap='word',font=('Sans',11),padx=16,pady=16); box.pack(fill='both',expand=True); box.configure(state='disabled'); return box
+  box=tk.Text(parent,bg=PANEL,fg=TEXT,insertbackground=GOLD,selectbackground=GOLD,selectforeground=BG,relief='flat',wrap='word',font=('Sans',11),padx=16,pady=16); box.pack(fill='both',expand=True); box.configure(state='disabled'); return box
  def write(self,box,text): box.configure(state='normal'); box.delete('1.0','end'); box.insert('end',text); box.configure(state='disabled')
  def work(self,fn,callback):
   if self.busy: return
